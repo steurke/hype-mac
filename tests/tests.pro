@@ -1,4 +1,10 @@
-QT += core gui qml quick quickcontrols2 multimedia widgets testlib pdf concurrent dbus
+QT += core gui qml quick quickcontrols2 multimedia widgets testlib pdf concurrent
+macx {
+    exists(/opt/homebrew/include/webp/demux.h): INCLUDEPATH += /opt/homebrew/include
+    exists(/usr/local/include/webp/demux.h): INCLUDEPATH += /usr/local/include
+    exists(/opt/homebrew/lib/libwebp.dylib): LIBS += -L/opt/homebrew/lib
+    exists(/usr/local/lib/libwebp.dylib): LIBS += -L/usr/local/lib
+}
 CONFIG += c++17 testcase
 TEMPLATE = app
 TARGET = hype-tests

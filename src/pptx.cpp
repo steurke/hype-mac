@@ -1,5 +1,6 @@
 #include "pptx.h"
 #include "renderer.h"
+#include "toolpath.h"
 #include <QBuffer>
 #include <QDataStream>
 #include <QDir>
@@ -353,7 +354,7 @@ bool readSlide(const QJsonObject &entry, const QDir &base, PowerPointSlide &slid
     if (!checkImage(slide.poster) || (!slide.overlay.isEmpty() && !checkImage(slide.overlay)))
         return false;
     QProcess probe;
-    probe.start("ffprobe", {"-v", "error", "-show_streams", "-of", "json", slide.video});
+    probe.start(hypeToolPath("ffprobe"), {"-v", "error", "-show_streams", "-of", "json", slide.video});
     if (!probe.waitForStarted()) {
         error = "Cannot start ffprobe: " + probe.errorString();
         return false;
@@ -417,7 +418,7 @@ int encoderThreads() { return qBound(2, QThread::idealThreadCount() / 2, 16); }
 QString preparePowerPointVideo(const QString &source, const QString &output, QString *error,
                               const std::function<void(double)> &progress) {
     QProcess probe;
-    probe.start("ffprobe", {"-v", "error", "-show_streams", "-show_format", "-of", "json", source});
+    probe.start(hypeToolPath("ffprobe"), {"-v", "error", "-show_streams", "-show_format", "-of", "json", source});
     if (!probe.waitForFinished(30000) || probe.exitCode() != 0) {
         probe.kill();
         probe.waitForFinished();
@@ -440,7 +441,7 @@ QString preparePowerPointVideo(const QString &source, const QString &output, QSt
         return source;
     const double duration = info["format"].toObject()["duration"].toString().toDouble();
     QProcess encoder;
-    encoder.start("ffmpeg", {"-v", "error", "-nostdin", "-y", "-i", source,
+    encoder.start(hypeToolPath("ffmpeg"), {"-v", "error", "-nostdin", "-y", "-i", source,
         "-map", "0:v:0", "-map", "0:a:0?", "-c:v", "libx264", "-preset", "fast", "-crf", "18",
         "-threads", QString::number(encoderThreads()), "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2", "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-progress", "pipe:1", output});

@@ -1,0 +1,10 @@
+# Nord — bundled with Hype for macOS.
+background = "#2e3440"
+foreground = "#d8dee9"
+accent = "#88c0d0"
+green = "#a3be8c"
+red = "#bf616a"
+yellow = "#ebcb8b"
+magenta = "#b48ead"
+cyan = "#8fbcbb"
+dark_foreground = "#4c566a"

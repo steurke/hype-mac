@@ -1,12 +1,19 @@
 #include "apptheme.h"
 #include "cli.h"
 #include "deck.h"
+#include "platformfont.h"
 #include "renderer.h"
+#ifdef Q_OS_MACOS
+#include <QApplication>
+#else
 #include <QGuiApplication>
+#endif
 #include <QCommandLineParser>
+#ifdef Q_OS_LINUX
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QDBusVariant>
+#endif
 #include <QFont>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -18,9 +25,13 @@
 #include <QScopeGuard>
 #include <QTimer>
 #include <cstdio>
+#ifdef Q_OS_MACOS
+#include <unistd.h>
+#endif
 // The desktop's interface font, e.g. "Adwaita Sans 11", which the gtk3 platform
 // theme used to supply. Without a settings portal Qt's default font stays.
 static void adoptDesktopFont() {
+#ifdef Q_OS_LINUX
     auto call = QDBusMessage::createMethodCall("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
                                                "org.freedesktop.portal.Settings", "ReadOne");
     call.setArguments({"org.gnome.desktop.interface", "font-name"});
@@ -33,15 +44,27 @@ static void adoptDesktopFont() {
     QFont font(name.left(space));
     font.setPointSizeF(size);
     QGuiApplication::setFont(font);
+#endif
 }
 int main(int argc, char **argv) {
     // Hype themes itself. Qt's gtk3 platform theme only adds a use-after-free
-    // inside GTK when the desktop theme changes under a running editor.
+    // inside GTK when the desktop theme changes under a running editor. On macOS
+    // the generic theme would also discard the system's light/dark palette.
+#ifndef Q_OS_MACOS
     qputenv("QT_QPA_PLATFORMTHEME", "generic");
+#endif
     // Commands, exports and help draw no window, so they must not need a display,
     // even where the desktop exports QT_QPA_PLATFORM=wayland.
     // Bare hype prints help, as a command line tool should; launchers say hype open.
-    const bool command = argc == 1 || isCliCommand(argv[1]);
+#ifdef Q_OS_MACOS
+    // LaunchServices starts the bundle with no arguments, reparented to launchd.
+    // A bare `hype` from a terminal or script keeps its shell parent and still
+    // prints help, so key off the parent rather than the controlling tty.
+    const bool launchedFromFinder = argc == 1 && getppid() == 1;
+#else
+    const bool launchedFromFinder = false;
+#endif
+    const bool command = !launchedFromFinder && (argc == 1 || isCliCommand(argv[1]));
     bool windowless = command;
     for (int i = 1; i < argc; ++i) {
         const QByteArray argument(argv[i]);
@@ -51,7 +74,11 @@ int main(int argc, char **argv) {
     }
     if (windowless)
         qputenv("QT_QPA_PLATFORM", "offscreen");
+#ifdef Q_OS_MACOS
+    QApplication app(argc, argv);
+#else
     QGuiApplication app(argc, argv);
+#endif
     app.setApplicationName("hype");
     app.setApplicationVersion("0.4.2");
     app.setDesktopFileName(qEnvironmentVariable("HYPE_DESKTOP_FILE", "hype"));
@@ -141,6 +168,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "%s\n", qPrintable(error.toString()));
     });
     engine.rootContext()->setContextProperty("deck", &deck);
+    engine.rootContext()->setContextProperty("defaultFontFamily", hypeDefaultFontFamily());
     QPointer<Thumbnails> thumbnails = new Thumbnails(&deck);
     engine.addImageProvider("slides", thumbnails);
     auto drainRenders = [thumbnails] {

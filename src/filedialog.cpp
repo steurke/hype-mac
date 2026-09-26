@@ -1,4 +1,43 @@
 #include "filedialog.h"
+#ifdef Q_OS_MACOS
+#include <QApplication>
+#include <QDir>
+#include <QEvent>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QStandardPaths>
+#include <QStringList>
+
+// macOS has no freedesktop portal; Qt's static pickers wrap NSOpenPanel and
+// NSSavePanel and give the same calling convention as the Linux implementation.
+QString FileDialog::choose(bool save, const QString &location, const QString &label,
+                           const QStringList &patterns, QString *error) {
+    QString start = save ? QFileInfo(location).absolutePath()
+                         : (location.isEmpty() ? QString() : QDir(location).absolutePath());
+    if (start.isEmpty())
+        start = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    QStringList filterParts;
+    for (const auto &pattern : patterns)
+        if (!pattern.isEmpty())
+            filterParts << pattern;
+    QString filter = label;
+    if (!filterParts.isEmpty())
+        filter += " (" + filterParts.join(' ') + ")";
+    if (!filter.isEmpty())
+        filter += ";;All Files (*)";
+    const QString suggested = QFileInfo(location).fileName();
+    QString selected = save ? QFileDialog::getSaveFileName(nullptr, label.isEmpty() ? "Save File" : label,
+                                                           start.isEmpty() ? suggested : start + '/' + suggested, filter)
+                            : QFileDialog::getOpenFileName(nullptr, label.isEmpty() ? "Open File" : label,
+                                                           start, filter);
+    if (selected.isEmpty())
+        return {}; // Cancelled: like the portal, leave *error empty.
+    Q_UNUSED(error);
+    return selected;
+}
+void FileDialog::response(uint, const QVariantMap &) {}
+bool FileDialog::eventFilter(QObject *, QEvent *) { return false; }
+#else
 #include <QCoreApplication>
 #include <QDBusArgument>
 #include <QDBusConnection>
@@ -127,3 +166,4 @@ bool FileDialog::eventFilter(QObject *, QEvent *event) {
         return false;
     }
 }
+#endif

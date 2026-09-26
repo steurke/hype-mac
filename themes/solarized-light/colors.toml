@@ -1,0 +1,10 @@
+# Solarized Light — bundled with Hype for macOS.
+background = "#fdf6e3"
+foreground = "#657b83"
+accent = "#268bd2"
+green = "#859900"
+red = "#dc322f"
+yellow = "#b58900"
+magenta = "#d33682"
+cyan = "#2aa198"
+dark_foreground = "#93a1a1"

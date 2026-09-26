@@ -7,11 +7,13 @@
 #include <QApplication>
 #include <QAbstractTextDocumentLayout>
 #include <QClipboard>
+#ifdef Q_OS_LINUX
 #include <QDBusArgument>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QDBusObjectPath>
 #include <QDBusVirtualObject>
+#endif
 #include <QFile>
 #include <QJsonDocument>
 #include <QJSEngine>
@@ -44,6 +46,7 @@
 #include <QVideoFrame>
 #include <QtTest>
 
+#ifdef Q_OS_LINUX
 class TestFilePortal : public QDBusVirtualObject {
   public:
     QString method, title, selected, alternatePath;
@@ -77,6 +80,7 @@ class TestFilePortal : public QDBusVirtualObject {
         return true;
     }
 };
+#endif
 
 class HypeTests : public QObject {
     Q_OBJECT
@@ -96,6 +100,7 @@ static void write(const QString &path, const QString &content) {
         QVERIFY(settingsDirectory.isValid());
         QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDirectory.path());
     }
+#ifdef Q_OS_LINUX
     void portalFileDialogs() {
         if (!qEnvironmentVariableIsSet("HYPE_PORTAL_TESTS"))
             QSKIP("Run with HYPE_PORTAL_TESTS=1 under dbus-run-session");
@@ -145,6 +150,7 @@ static void write(const QString &path, const QString &content) {
         QVERIFY(FileDialog::choose(false, "/tmp", "Media", {"*.png"}, &error).isEmpty());
         QVERIFY(!error.isEmpty());
     }
+#endif
     void followsDesktopTheme() {
         QTemporaryDir files;
         const QString current = files.path() + "/current";
@@ -1040,7 +1046,12 @@ static void write(const QString &path, const QString &content) {
         QCOMPARE(withMedia(examples, replacement), examples + "\n" + replacement + "\n");
     }
     void asynchronousExport() {
-        const QString executable = QFINDTESTDATA("../build/hype");
+        QString executable = QFINDTESTDATA("../build/hype");
+#ifdef Q_OS_MACOS
+        // qmake builds a bundle on macOS; the executable lives inside it.
+        if (executable.isEmpty())
+            executable = QFINDTESTDATA("../build/hype.app/Contents/MacOS/hype");
+#endif
         QVERIFY(!executable.isEmpty());
         QTemporaryDir tmp;
         Deck deck(nullptr, executable);

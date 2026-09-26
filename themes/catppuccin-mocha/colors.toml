@@ -1,0 +1,10 @@
+# Catppuccin Mocha — bundled with Hype for macOS.
+background = "#1e1e2e"
+foreground = "#cdd6f4"
+accent = "#89b4fa"
+green = "#a6e3a1"
+red = "#f38ba8"
+yellow = "#f9e2af"
+magenta = "#cba6f7"
+cyan = "#89dceb"
+dark_foreground = "#7f849c"

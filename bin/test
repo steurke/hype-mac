@@ -3,6 +3,18 @@ set -eu
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 mkdir -p "$ROOT/build/tests"
 cd "$ROOT/build/tests"
-qmake6 "$ROOT/tests/tests.pro"
-make -j"$(nproc)"
-QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic QT_STYLE_OVERRIDE=Fusion ./hype-tests "$@"
+if command -v qmake6 >/dev/null 2>&1; then
+    QMAKE=qmake6
+elif [ -x /opt/homebrew/opt/qt/bin/qmake ]; then
+    QMAKE=/opt/homebrew/opt/qt/bin/qmake
+else
+    QMAKE=qmake
+fi
+JOBS="$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)"
+"$QMAKE" "$ROOT/tests/tests.pro"
+make -j"$JOBS"
+TESTBIN=./hype-tests
+if [ -x "./hype-tests.app/Contents/MacOS/hype-tests" ]; then
+    TESTBIN=./hype-tests.app/Contents/MacOS/hype-tests
+fi
+QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic QT_STYLE_OVERRIDE=Fusion "$TESTBIN" "$@"

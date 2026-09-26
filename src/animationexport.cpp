@@ -1,6 +1,7 @@
 #include "animationexport.h"
 #include "pptx.h"
 #include "renderer.h"
+#include "toolpath.h"
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -57,7 +58,7 @@ bool exportAnimation(const QString &source, const QString &base, const QVariantM
     // complete animation in memory. Quantize cumulative timestamps to the same
     // 60 Hz output clock used by PowerPoint exports, avoiding per-frame drift.
     QProcess encoder;
-    encoder.start("ffmpeg", {"-v",
+    encoder.start(hypeToolPath("ffmpeg"), {"-v",
                              "error",
                              "-nostdin",
                              "-y",

@@ -2,9 +2,11 @@
 #include "animationexport.h"
 #include "filedialog.h"
 #include "images.h"
+#include "platformfont.h"
 #include "pptx.h"
 #include "renderer.h"
 #include <QGuiApplication>
+#include <QCoreApplication>
 #include <QCache>
 #include <QClipboard>
 #include <QCryptographicHash>
@@ -466,8 +468,15 @@ void Deck::redo() {
 }
 void Deck::discoverThemes() {
     QString root = qEnvironmentVariable("OMARCHY_PATH", QDir::homePath() + "/.local/share/omarchy");
-    QStringList roots{root + "/themes", QDir::homePath() + "/omarchy/themes",
-                      QDir::homePath() + "/.config/omarchy/themes"};
+    QStringList roots;
+#ifdef Q_OS_MACOS
+    // Bundled themes first, then per-user themes, so a user can shadow a bundled one.
+    roots << QCoreApplication::applicationDirPath() + "/../Resources/themes"
+          << QDir::homePath() + "/.config/hype/themes"
+          << QDir::homePath() + "/Library/Application Support/Hype/themes";
+#endif
+    roots << root + "/themes" << QDir::homePath() + "/omarchy/themes"
+          << QDir::homePath() + "/.config/omarchy/themes";
     for (auto &r : roots)
         for (auto &name : QDir(r).entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
             QString path = r + "/" + name + "/colors.toml";
@@ -513,7 +522,7 @@ QString Deck::sizeLabel() const {
     return QLocale().formattedDataSize(totalBytes(), 0, QLocale::DataSizeSIFormat);
 }
 QStringList Deck::fontNames() const { return QFontDatabase::families(); }
-QString Deck::fontName() const { return scalar(m_parsed.header, "font", "JetBrains Mono"); }
+QString Deck::fontName() const { return scalar(m_parsed.header, "font", hypeDefaultFontFamily()); }
 void Deck::chooseFont(const QString &family) {
     if (!fontNames().contains(family) || family == fontName())
         return;
@@ -544,7 +553,7 @@ QVariantMap Deck::palette() const {
         if (QColor(v).isValid())
             colors[key] = v;
     }
-    colors["font"] = scalar(m_parsed.header, "font", "JetBrains Mono");
+    colors["font"] = scalar(m_parsed.header, "font", hypeDefaultFontFamily());
     m_paletteHeader = m_parsed.header;
     m_paletteCache = colors;
     return colors;

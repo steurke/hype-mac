@@ -1,4 +1,13 @@
-QT += core gui qml quick quickcontrols2 multimedia concurrent dbus
+QT += core gui qml quick quickcontrols2 multimedia concurrent
+# QtDBus and the freedesktop portal are Linux-only. macOS uses native panels.
+macx {
+    QT += widgets
+    # libwebp comes from Homebrew; the prefix differs by architecture.
+    exists(/opt/homebrew/include/webp/demux.h): INCLUDEPATH += /opt/homebrew/include
+    exists(/usr/local/include/webp/demux.h): INCLUDEPATH += /usr/local/include
+    exists(/opt/homebrew/lib/libwebp.dylib): LIBS += -L/opt/homebrew/lib
+    exists(/usr/local/lib/libwebp.dylib): LIBS += -L/usr/local/lib
+}
 # Like Qt's own modules, Hype never throws or catches. Without unwinding tables and with
 # link-time optimization, the installed binary is about a quarter smaller.
 CONFIG += c++17 release ltcg exceptions_off

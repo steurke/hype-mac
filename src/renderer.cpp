@@ -1,6 +1,8 @@
 #include "renderer.h"
 #include "images.h"
+#include "platformfont.h"
 #include "syntax.h"
+#include "toolpath.h"
 #include <QAbstractTextDocumentLayout>
 #include <QCache>
 #include <QCryptographicHash>
@@ -256,7 +258,7 @@ static QString createPoster(const QString &video, const QString &base) {
     if (!poster.open()) return {};
     poster.close();
     QProcess ffmpeg;
-    ffmpeg.start("ffmpeg", {"-v", "error", "-y", "-i", video, "-frames:v", "1", "-vf",
+    ffmpeg.start(hypeToolPath("ffmpeg"), {"-v", "error", "-y", "-i", video, "-frames:v", "1", "-vf",
                             "scale=1280:-2", poster.fileName()});
     if (!ffmpeg.waitForFinished(30000) || ffmpeg.exitCode() != 0) {
         ffmpeg.kill();
@@ -420,6 +422,45 @@ static QString slideProperty(const QString &source, const QString &key) {
     QRegularExpression re("<!--\\s*hype:[\\s\\S]*?\\b" + key + "=\"([^\"]*)\"[\\s\\S]*?-->");
     return re.match(source).captured(1);
 }
+// Hype's dialect reads _underscores_ as underline and ~~tildes~~ as strikethrough.
+// Qt changed both: underscore now follows CommonMark (italic) and ~~ is dropped,
+// though inline <u> and <s> still work. Convert outside code, leaving code spans,
+// fences, __double underscores__, and intraword underscores (snake_case) alone.
+static QString hypeInlineMarkup(const QString &markdown) {
+    static const QRegularExpression underline(QStringLiteral("(?<![\\w_])_([^_\\n]+?)_(?![\\w_])"));
+    static const QRegularExpression strike(QStringLiteral("(?<!~)~~([^~\\n]+?)~~(?!~)"));
+    static const QRegularExpression fence(QStringLiteral("^\\s*(```|~~~)"));
+    QStringList lines = markdown.split('\n');
+    bool inFence = false;
+    for (auto &line : lines) {
+        if (fence.match(line).hasMatch()) {
+            inFence = !inFence;
+            continue;
+        }
+        if (inFence || (!line.contains('_') && !line.contains("~~")))
+            continue;
+        QString out;
+        int i = 0;
+        while (i < line.size()) {
+            if (line[i] == '`') {
+                const int j = line.indexOf('`', i + 1);
+                if (j < 0) { out += line.mid(i); break; }
+                out += line.mid(i, j - i + 1);
+                i = j + 1;
+            } else {
+                const int next = line.indexOf('`', i);
+                const int end = next < 0 ? line.size() : next;
+                QString segment = line.mid(i, end - i);
+                segment.replace(underline, QStringLiteral("<u>\\1</u>"));
+                segment.replace(strike, QStringLiteral("<s>\\1</s>"));
+                out += segment;
+                i = end;
+            }
+        }
+        line = out;
+    }
+    return lines.join('\n');
+}
 static QString preserveLineBreaks(QString markdown) {
     markdown.replace("\r\n", "\n").replace('\r', '\n');
     const QStringList visible = outsideCode(markdown, false).split('\n');
@@ -435,8 +476,8 @@ static void sizeSlideText(QTextDocument &doc, const QVariantMap &palette, qreal 
     // A null page size suspends layout while every format below changes; the
     // final setTextWidth lays the document out once instead of once per run.
     doc.setPageSize(QSizeF(0, 0));
-    QFont font(code ? QString("JetBrains Mono")
-                    : palette.value("font", "JetBrains Mono").toString());
+    QFont font(code ? hypeDefaultFontFamily()
+                    : palette.value("font", hypeDefaultFontFamily()).toString());
     font.setPixelSize(qRound(fontSize));
     font.setHintingPreference(QFont::PreferNoHinting);
     doc.setDefaultFont(font);
@@ -506,7 +547,7 @@ static void sizeSlideText(QTextDocument &doc, const QVariantMap &palette, qreal 
 void layoutSlideText(QTextDocument &doc, const QString &markdown, const QVariantMap &palette,
                      qreal fontSize, qreal width, bool centered, bool code) {
     doc.setUndoRedoEnabled(false);
-    doc.setMarkdown(preserveLineBreaks(markdown), QTextDocument::MarkdownDialectGitHub);
+    doc.setMarkdown(preserveLineBreaks(hypeInlineMarkup(markdown)), QTextDocument::MarkdownDialectGitHub);
     sizeSlideText(doc, palette, fontSize, width, centered, code);
 }
 static QMutex fitMutex;

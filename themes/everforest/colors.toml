@@ -1,0 +1,10 @@
+# Everforest — bundled with Hype for macOS.
+background = "#2d353b"
+foreground = "#d3c6aa"
+accent = "#a7c080"
+green = "#a7c080"
+red = "#e67e80"
+yellow = "#dbbc7f"
+magenta = "#d699b6"
+cyan = "#7fbbb3"
+dark_foreground = "#859289"

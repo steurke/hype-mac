@@ -14,6 +14,24 @@ omarchy pkg add hype
 
 Then open **Hype** from the app launcher, or run `hype` in a terminal.
 
+## macOS
+
+This fork builds Hype natively on macOS. QtDBus and the freedesktop portal are
+replaced by native dialogs and the system appearance; slide themes and a
+markdown-dialect shim travel with the app.
+
+Requirements: Xcode command line tools and Homebrew Qt, `ffmpeg`, and
+`source-highlight` (the last two are only needed for video and code export).
+
+```sh
+brew install qt ffmpeg source-highlight
+./bin/package-mac        # builds dist/Hype.app
+```
+
+`bin/build` builds the development binary at `build/hype.app`. `bin/test` runs
+the test suite. The bundle is unsigned; on another Mac, open it once with
+right-click → Open, or run `xattr -dr com.apple.quarantine dist/Hype.app`.
+
 ## Make a presentation
 
 Open Hype from your app launcher. It reopens your last presentation; use **Ctrl+N** to start a new one, or **Ctrl+O** to choose a Markdown file.

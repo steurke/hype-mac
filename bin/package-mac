@@ -1,0 +1,83 @@
+#!/bin/sh
+# Build Hype and assemble a self-contained macOS application bundle.
+set -eu
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+
+"$ROOT/bin/build"
+
+APP="$ROOT/dist/Hype.app"
+rm -rf "$ROOT/dist"
+mkdir -p "$ROOT/dist"
+cp -R "$ROOT/build/hype.app" "$APP"
+cp "$ROOT/pkgbuild/Info.plist" "$APP/Contents/Info.plist"
+
+# Slide themes travel inside the bundle; discoverThemes() reads Resources/themes.
+mkdir -p "$APP/Contents/Resources/themes"
+cp -R "$ROOT/themes/." "$APP/Contents/Resources/themes/"
+
+# Render the SVG icon through Quick Look, then assemble a .icns.
+PNG="$ROOT/build/hype-icon-1024.png"
+if qlmanage -t -s 1024 -o "$ROOT/build" "$ROOT/pkgbuild/hype.svg" >/dev/null 2>&1; then
+    mv -f "$ROOT/build/hype.svg.png" "$PNG"
+fi
+if [ -f "$PNG" ]; then
+    ICONSET="$ROOT/build/hype.iconset"
+    rm -rf "$ICONSET"
+    mkdir -p "$ICONSET"
+    for pair in "16 icon_16x16" "32 icon_16x16@2x" "32 icon_32x32" "64 icon_32x32@2x" \
+                "128 icon_128x128" "256 icon_128x128@2x" "256 icon_256x256" \
+                "512 icon_256x256@2x" "512 icon_512x512" "1024 icon_512x512@2x"; do
+        size="${pair%% *}"; name="${pair##* }"
+        sips -z "$size" "$size" "$PNG" --out "$ICONSET/$name.png" >/dev/null
+    done
+    iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/hype.icns"
+fi
+
+# Locate Qt's tools.
+if command -v qmake6 >/dev/null 2>&1; then
+    QMAKE=qmake6
+elif [ -x /opt/homebrew/opt/qt/bin/qmake ]; then
+    QMAKE=/opt/homebrew/opt/qt/bin/qmake
+else
+    QMAKE=qmake
+fi
+MACDEPLOYQT="$(dirname "$QMAKE")/macdeployqt"
+[ -x "$MACDEPLOYQT" ] || MACDEPLOYQT="$(command -v macdeployqt)"
+
+# Extra framework search paths, so QtSvg (a separate Homebrew formula) is found.
+LIBPATHS=""
+for prefix in /opt/homebrew /usr/local; do
+    for module in qtsvg qtdeclarative qtbase qtmultimedia; do
+        [ -d "$prefix/opt/$module/lib" ] && LIBPATHS="$LIBPATHS -libpath=$prefix/opt/$module/lib"
+    done
+done
+
+# -qmldir scans Main.qml's imports; without it the QtQuick.Controls QML modules
+# (which live inside the app's Qt resource, not on disk) would not be deployed.
+"$MACDEPLOYQT" "$APP" -qmldir="$ROOT/src" $LIBPATHS
+
+# Drop plugins Hype never uses whose frameworks are not shipped: the PDF image
+# reader (needs qtwebengine's QtPdf) and the on-screen keyboard.
+rm -f "$APP/Contents/PlugIns/imageformats/libqpdf.dylib"
+rm -rf "$APP/Contents/PlugIns/platforminputcontexts"
+
+# Hype's commands run with QT_QPA_PLATFORM=offscreen so they need no display.
+# macdeployqt only copies the cocoa platform plugin, so add offscreen and point
+# it at the frameworks already inside the bundle.
+OFFSCREEN="$(dirname "$QMAKE")/../share/qt/plugins/platforms/libqoffscreen.dylib"
+[ -f "$OFFSCREEN" ] || OFFSCREEN="$("$QMAKE" -query QT_INSTALL_PLUGINS)/platforms/libqoffscreen.dylib"
+if [ -f "$OFFSCREEN" ]; then
+    cp "$OFFSCREEN" "$APP/Contents/PlugIns/platforms/"
+    for fw in QtGui QtCore QtOpenGL; do
+        install_name_tool -change "@rpath/$fw.framework/Versions/A/$fw" \
+            "@executable_path/../Frameworks/$fw.framework/Versions/A/$fw" \
+            "$APP/Contents/PlugIns/platforms/libqoffscreen.dylib" 2>/dev/null || true
+    done
+fi
+
+# Every change above invalidated the linker's ad-hoc signature, and macOS refuses
+# to launch a bundle whose seal no longer matches. Re-sign ad-hoc as the last step.
+codesign --force --deep --sign - "$APP"
+
+echo "Built $APP"
+du -sh "$APP"

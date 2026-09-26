@@ -842,7 +842,7 @@ ApplicationWindow {
                             RowLayout {
                                 required property var modelData
                                 spacing: 14
-                                Label { text: modelData[0].replace(/\+/g, " + "); font.family: "JetBrains Mono"; font.pixelSize: 12; color: win.ui.foreground; Layout.preferredWidth: 180 }
+                                Label { text: modelData[0].replace(/\+/g, " + "); font.family: defaultFontFamily; font.pixelSize: 12; color: win.ui.foreground; Layout.preferredWidth: 180 }
                                 Label { text: modelData[1]; font.pixelSize: 13; color: win.ui.muted }
                             }
                         }
@@ -1233,7 +1233,7 @@ ApplicationWindow {
                     onWheel: function(event) { win.scrollEditor(slideScroll.contentItem, event) }
                 }
                 TextArea {
-                    id: slideEditor; objectName: "slideEditor"; persistentSelection: true; textFormat: TextEdit.PlainText; color: win.ui.foreground; selectionColor: win.ui.selection; selectedTextColor: win.ui.selectionText; font.family: "JetBrains Mono"; font.pixelSize: 16
+                    id: slideEditor; objectName: "slideEditor"; persistentSelection: true; textFormat: TextEdit.PlainText; color: win.ui.foreground; selectionColor: win.ui.selection; selectedTextColor: win.ui.selectionText; font.family: defaultFontFamily; font.pixelSize: 16
                     wrapMode: TextEdit.Wrap; leftPadding: 24; topPadding: 16; placeholderText: "# Your headline"
                     onTextChanged: {
                         if (!win.syncingEditor && activeFocus) {
@@ -1271,7 +1271,7 @@ ApplicationWindow {
                 persistentSelection: true
                 textFormat: TextEdit.PlainText
                 color: win.ui.foreground; selectionColor: win.ui.selection; selectedTextColor: win.ui.selectionText
-                font.family: "JetBrains Mono"; font.pixelSize: 18
+                font.family: defaultFontFamily; font.pixelSize: 18
                 wrapMode: TextEdit.NoWrap; leftPadding: 32; topPadding: 30; bottomPadding: 30
                 onTextChanged: { if (!win.syncingEditor && activeFocus && text !== deck.source) deck.editSource(text) }
                 onCursorPositionChanged: { if (!win.syncingEditor && activeFocus) deck.selectAt(cursorPosition) }

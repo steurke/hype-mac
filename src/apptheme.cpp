@@ -3,6 +3,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QGuiApplication>
+#include <QPalette>
 #include <QRegularExpression>
 #include <cmath>
 
@@ -20,9 +22,13 @@ static QColor contrastInk(const QColor &color) {
     return luminance > .179 ? QColor("#111111") : QColor("#ffffff");
 }
 AppTheme::AppTheme(QObject *parent)
+#ifdef Q_OS_MACOS
+    : AppTheme(QString(), parent) {}
+#else
     : AppTheme(qEnvironmentVariable("XDG_STATE_HOME", QDir::homePath() + "/.local/state") +
                    "/omarchy/current",
                parent) {}
+#endif
 AppTheme::AppTheme(const QString &currentDirectory, QObject *parent)
     : QObject(parent), m_currentDirectory(currentDirectory) {
     m_reload.setSingleShot(true);
@@ -30,9 +36,41 @@ AppTheme::AppTheme(const QString &currentDirectory, QObject *parent)
     connect(&m_reload, &QTimer::timeout, this, &AppTheme::reload);
     connect(&m_watcher, &QFileSystemWatcher::fileChanged, this, [this] { m_reload.start(); });
     connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, [this] { m_reload.start(); });
+#ifdef Q_OS_MACOS
+    // Follow the system appearance: the palette changes when light/dark is toggled.
+    connect(qGuiApp, &QGuiApplication::paletteChanged, this, [this] { m_reload.start(); });
+#endif
     reload();
 }
 void AppTheme::reload() {
+    if (m_currentDirectory.isEmpty()) {
+        // No desktop theme directory (macOS has no Omarchy). Derive the editor
+        // chrome from the system palette, which tracks light and dark appearance.
+        const QPalette palette = QGuiApplication::palette();
+    const QColor bg = palette.color(QPalette::Window);
+    const QColor fg = palette.color(QPalette::WindowText);
+    const QColor accent = palette.color(QPalette::Highlight);
+    const QColor selection = palette.color(QPalette::Highlight);
+    const QVariantMap colors{{"background", bg},
+                             {"foreground", fg},
+                             {"accent", accent},
+                             {"panel", mix(bg, fg, .025)},
+                             {"button", mix(bg, fg, .08)},
+                             {"hover", mix(bg, accent, .22)},
+                             {"border", mix(bg, fg, .22)},
+                             {"muted", mix(bg, fg, .62)},
+                             {"selection", selection},
+                             {"selectionText", contrastInk(selection)},
+                             {"accentText", contrastInk(accent)},
+                             {"accentHover", mix(accent, fg, .15)},
+                             {"windowBorder", mix(bg, fg, .22)},
+                             {"error", QColor("#d94b4b")}};
+    if (colors != m_colors) {
+        m_colors = colors;
+        emit changed();
+    }
+    return;
+    }
     const QString theme = m_currentDirectory + "/theme", path = theme + "/colors.toml";
     QMap<QString, QColor> values;
     QFile file(path);

@@ -15,6 +15,7 @@
 #include <QDBusVariant>
 #endif
 #include <QFont>
+#include <QFileOpenEvent>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPointer>
@@ -46,6 +47,48 @@ static void adoptDesktopFont() {
     QGuiApplication::setFont(font);
 #endif
 }
+// macOS delivers a document opened in Finder or with `open` as a QFileOpenEvent,
+// which can arrive before the editor exists. Capture it on the application and
+// load it once the deck is ready.
+#ifdef Q_OS_MACOS
+class HypeApplication : public QApplication {
+  public:
+    HypeApplication(int &argc, char **argv) : QApplication(argc, argv) {}
+    void setDeck(Deck *deck, QQuickWindow *window) {
+        m_deck = deck;
+        m_window = window;
+        if (!m_pendingFile.isEmpty()) {
+            const QString path = m_pendingFile;
+            m_pendingFile.clear();
+            openDocument(path);
+        }
+    }
+    bool event(QEvent *event) override {
+        if (event->type() == QEvent::FileOpen) {
+            const QString path = static_cast<QFileOpenEvent *>(event)->file();
+            if (!path.isEmpty()) {
+                if (m_deck)
+                    openDocument(path);
+                else
+                    m_pendingFile = path;
+            }
+            return true;
+        }
+        return QApplication::event(event);
+    }
+  private:
+    void openDocument(const QString &path) {
+        m_deck->loadPath(path, true);
+        if (m_window) {
+            m_window->raise();
+            m_window->requestActivate();
+        }
+    }
+    Deck *m_deck = nullptr;
+    QQuickWindow *m_window = nullptr;
+    QString m_pendingFile;
+};
+#endif
 int main(int argc, char **argv) {
     // Hype themes itself. Qt's gtk3 platform theme only adds a use-after-free
     // inside GTK when the desktop theme changes under a running editor. On macOS
@@ -75,7 +118,7 @@ int main(int argc, char **argv) {
     if (windowless)
         qputenv("QT_QPA_PLATFORM", "offscreen");
 #ifdef Q_OS_MACOS
-    QApplication app(argc, argv);
+    HypeApplication app(argc, argv);
 #else
     QGuiApplication app(argc, argv);
 #endif
@@ -184,6 +227,10 @@ int main(int argc, char **argv) {
     engine.load(QUrl("qrc:/Main.qml"));
     if (engine.rootObjects().isEmpty())
         return 1;
+    auto *rootWindow = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+#ifdef Q_OS_MACOS
+    app.setDeck(&deck, rootWindow);
+#endif
     if (args.isSet("markdown"))
         QMetaObject::invokeMethod(engine.rootObjects().first(), "openMarkdown");
     if (args.isSet("overview"))

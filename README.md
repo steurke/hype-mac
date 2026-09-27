@@ -124,7 +124,7 @@ Use just the filename; Hype finds the right directory:
 ![](demo.mp4)
 ```
 
-A lone image fits without cropping. Text on an image slide is always overlaid, with white lettering, subtle darkening, and a very light blur of the picture for readability. The text stays sharp, and pictures without text stay unblurred. An image with a headline spans by default; `fit` or `background=blur` keeps the whole image visible beneath the text. Videos fit the slide and play once when you reach them during a presentation.
+A lone image fits without cropping. Text on an image slide is always overlaid, with white lettering, subtle darkening, and a very light blur of the picture for readability. The text stays sharp, and pictures without text stay unblurred. Add `sharp` to the media directives (`![fit sharp](photo.jpg)`) to keep the picture crisp beneath the text, and pair it with `overlay=` to control the darkening. An image with a headline spans by default; `fit` or `background=blur` keeps the whole image visible beneath the text. Videos fit the slide and play once when you reach them during a presentation.
 
 Choose **Fit** or **Span** from the **Layout** menu above the editor, or put layout options inside the brackets:
 

@@ -811,6 +811,12 @@ static void write(const QString &path, const QString &content) {
         m = parseMedia("![left](photo.jpg)\n\n# Text", "/tmp/deck");
         QVERIFY(m.error.isEmpty());
         QVERIFY(m.span);
+        // `sharp` keeps a picture crisp behind overlaid text; blur is the default.
+        m = parseMedia("![fit sharp](photo.jpg)\n\n# Text", "/tmp/deck");
+        QVERIFY(m.error.isEmpty());
+        QVERIFY(m.sharp && !m.span);
+        QCOMPARE(m.overlay, .25);
+        QVERIFY(!parseMedia("![fit](photo.jpg)\n\n# Text", "/tmp/deck").sharp);
     }
     void codeIsNotMedia() {
         QString source = "```markdown\n![](missing.png)\n<!-- Keep this code -->\n```";

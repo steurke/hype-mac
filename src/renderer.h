@@ -10,6 +10,7 @@ class QTextDocument;
 struct Media {
     QString file, path, poster, error, background;
     bool video = false, span = false, loop = false, muted = false, autoplay = true;
+    bool sharp = false;
     double overlay = 0;
     QString text;
 };

@@ -80,11 +80,14 @@ Each slide takes one image or video. Options go inside the brackets:
 | `![fit background=blur](portrait.jpg)` | Fill it with a blurred copy of the image |
 | `![fit background=auto](portrait.jpg)` | Match the image's edge color |
 | `![overlay=0.5](photo.jpg)` | Darken the picture behind text, from 0 to 1 |
+| `![sharp](photo.jpg)` | Keep a picture sharp behind overlaid text (no readability blur) |
 | `![loop muted](demo.mp4)` | Loop a video without sound |
 | `![autoplay=false](demo.mp4)` | Wait for Space to play the video |
 | `![poster=still.png](demo.mp4)` | Show an image from `images/` until it plays |
 
-Text on an image slide is overlaid in white over a slightly darkened picture.
+Text on an image slide is overlaid in white over a slightly darkened picture,
+with a light readability blur. Add `sharp` to keep the picture crisp; pair it
+with `overlay=` to control the darkening under the text.
 An image with a headline spans the slide unless you say `fit`.
 
 ## Commands

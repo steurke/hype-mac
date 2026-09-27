@@ -152,7 +152,7 @@ bool exportAnimation(const QString &source, const QString &base, const QVariantM
             p.setClipRect(rect);
             p.drawImage(
                 QRectF(rect.center() - QPointF(scaled.width() / 2, scaled.height() / 2), scaled),
-                media.text.trimmed().isEmpty() ? frame : softenedImage(frame, scaled));
+                media.text.trimmed().isEmpty() || media.sharp ? frame : softenedImage(frame, scaled));
             p.restore();
             p.drawImage(0, 0, overlay);
         }

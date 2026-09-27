@@ -2207,6 +2207,12 @@ static void write(const QString &path, const QString &content) {
         QVERIFY(d.slideText().contains("alt=\"Sloop rigging\""));
         QVERIFY(!parseMedia("```sh\n# Comment\n```\n![](photo.png)", {}).span);
         QVERIFY(parseMedia("# Headline\n![](photo.png)", {}).span);
+        d.editSlide("# Headline\n![fit](photo.png)");
+        d.setMediaSharp(true);
+        QVERIFY(parseMedia(d.slideText(), {}).sharp);
+        QCOMPARE(parseMedia(d.slideText(), {}).error, QString());
+        d.setMediaSharp(false);
+        QVERIFY(!parseMedia(d.slideText(), {}).sharp);
         const QString original = d.source();
         d.setMediaMode("invalid");
         QCOMPARE(d.source(), original);

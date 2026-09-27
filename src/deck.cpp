@@ -610,6 +610,7 @@ QVariantMap Deck::media() const {
                     {"title", title},
                     {"rect", mediaRect(m)},
                     {"background", m.background},
+                    {"sharp", m.sharp},
                     {"overlay", m.overlay}};
     return m_mediaCache;
 }
@@ -1164,6 +1165,12 @@ void Deck::setMediaMode(const QString &mode) {
     if (!QStringList{"fit", "span"}.contains(mode))
         return;
     editSlide(withMediaDirectives(slideSource(), {"fit", "span"}, {mode}));
+}
+void Deck::setMediaSharp(bool enabled) {
+    auto media = parseMedia(slideSource(), baseDir());
+    if (media.file.isEmpty())
+        return;
+    editSlide(withMediaDirectives(slideSource(), {"sharp"}, enabled ? QStringList{"sharp"} : QStringList{}));
 }
 void Deck::exportDialog(const QString &format) {
     if (m_exporting)

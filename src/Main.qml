@@ -618,6 +618,7 @@ ApplicationWindow {
                     id: mediaMenu; objectName: editorBar.scope + "mediaMenu"; y: parent.height + 4
                     AppMenuItem { text: "Fit"; checkable: true; checked: !deck.media.span; onTriggered: deck.setMediaMode("fit") }
                     AppMenuItem { text: "Span"; checkable: true; checked: deck.media.span; onTriggered: deck.setMediaMode("span") }
+                    AppMenuItem { text: "Sharp image"; checkable: true; visible: !deck.media.video && deck.media.title; checked: deck.media.sharp; onTriggered: deck.setMediaSharp(!deck.media.sharp) }
                     AppMenuSeparator {}
                     AppMenuItem { text: "Match image edges"; checkable: true; checked: deck.media.background === "auto"; onTriggered: deck.matchImageBackground(true) }
                     AppMenuItem { text: deck.media.video ? "Blurred first frame" : "Blurred image"; checkable: true; checked: deck.media.background === "blur"; onTriggered: deck.setMediaBackground("blur") }
